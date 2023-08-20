@@ -1,5 +1,5 @@
 # Exclude WiFi configuration file
-secrets
+secrets.*
 
 
 # Byte-compiled / optimized / DLL files

@@ -1,3 +1,7 @@
+# Pico Lights Plus
+# Code for controlling LED lights using the
+# Pico Lights Plus board with NeoPixel status
+# Also needs secrets.py with WiFi login details
 from machine import Pin
 from utime import sleep
 import network
@@ -5,6 +9,7 @@ import socket
 import uasyncio as asyncio
 import secrets
 import re
+from pixelstatus import *
 
 # Indexed at 0 (board labelling is 1)
 # These must be the same length (ie 3)
@@ -75,6 +80,7 @@ def setup_pins ():
 
 
 async def serve_client(reader, writer):
+    status_active()
     print("Client connected")
     request_line = await reader.readline()
     print("Request:", request_line)
@@ -100,10 +106,12 @@ async def serve_client(reader, writer):
     await writer.drain()
     await writer.wait_closed()
     print("Client disconnected")
-
+    status_ready()
 
 # Initialise Wifi
 async def main ():
+    # Set Status LED to Red (power on)
+    status_power()
     setup_pins ()
     print ("Connecting to network")
     try:
@@ -113,6 +121,7 @@ async def main ():
     print ("IP address", ip)
     asyncio.create_task(asyncio.start_server(serve_client, "0.0.0.0", 80))
     print ("Web server listening on", ip)
+    status_ready()
     while True:
         #onboard.on()
         # Enable following line for heartbeat debug messages

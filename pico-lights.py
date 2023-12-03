@@ -1,4 +1,4 @@
-# Pico Lights Plus
+# Pico Lights Plus - AP Mode
 # Code for controlling LED lights using the
 # Pico Lights Plus board with NeoPixel status
 # Also needs secrets.py with WiFi login details
@@ -10,6 +10,12 @@ import uasyncio as asyncio
 import secrets
 import re
 from pixelstatus import *
+
+# Mode can be ap (access point where the Pico acts as a web server)
+# or "client" [default] which connects to an existing network
+# Note that client mode is blocking and will not run the rest of the code
+# until a network connection is established
+mode="ap"
 
 # Indexed at 0 (board labelling is 1)
 # These must be the same length (ie 3)
@@ -57,6 +63,28 @@ def toggle_out (pin):
 
 def connect():
     #Connect to WLAN
+    if mode== "ap":
+        # Access Point mode
+        ip = connect_ap_mode()
+    else:
+        ip = connect_client_mode()
+    return ip
+    
+
+
+def connect_ap_mode ():
+    wlan = network.WLAN(network.AP_IF)
+    wlan.config(essid=secrets.SSID, password=secrets.PASSWORD)
+    wlan.active(True)
+    while wlan.active() == False:
+        print ('Trying to setup AP mode')
+    ip = wlan.ifconfig()[0]
+    print('AP Mode is active')
+    print('Connect to Wireless Network '+secrets.SSID)
+    print('Connect to IP address '+ip)
+    return ip
+
+def connect_client_mode ():
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.config(pm = 0xa11140) # Disable power saving mode
@@ -65,8 +93,7 @@ def connect():
         print('Waiting for connection...')
         sleep(1)
     ip = wlan.ifconfig()[0]
-    print(f'Connected on {ip}')
-      
+    print('Connect to IP address '+ip)    
     return ip
 
 

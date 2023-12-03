@@ -28,19 +28,9 @@ out = []
 led = []
 sw = []
 
-html = """<!DOCTYPE html>
-<html>
-<head> <title>Pico Lights Plus</title> </head>
-<body> <h1>Pico Lights Plus</h1>
-<p>%s</p>
-<ul>
-<li><a href="/lights?light=1&action=toggle">LED 1</a></li>
-<li><a href="/lights?light=2&action=toggle">LED 2</a></li>
-<li><a href="/lights?light=3&action=toggle">LED 3</a></li>
-</ul>
-</body>
-</html>
-"""
+
+with open("index.html", "r") as index_file:
+    index_html = index_file.readlines()
 
       
 # Functions control both output and led
@@ -126,9 +116,10 @@ async def serve_client(reader, writer):
             print ("LED selected "+str(led_selected))
             toggle_out (led_selected)
 
-    response = html % stateis
+    print ("Setting response")
     writer.write('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-    writer.write(response)
+    for line in index_html:
+        writer.write(line)
 
     await writer.drain()
     await writer.wait_closed()

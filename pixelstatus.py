@@ -59,6 +59,8 @@ def status_ready():
     pixels_show()
     
 # Network in use
+# Status is only a guide
+# Note that due to the async nature of the code then there may be other requests that are changing status
 def status_active():
     # Blue
     pixels_set (0, (0,0,255))

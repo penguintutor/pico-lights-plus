@@ -9,6 +9,7 @@ import socket
 import uasyncio as asyncio
 import secrets
 import re
+from url_handler import URL_Handler
 from pixelstatus import *
 
 # Mode can be ap (access point where the Pico acts as a web server)
@@ -16,6 +17,9 @@ from pixelstatus import *
 # Note that client mode is blocking and will not run the rest of the code
 # until a network connection is established
 mode="ap"
+
+# All documents in DocumentRoot are publically accessible
+DocumentRoot = "public/"
 
 # Indexed at 0 (board labelling is 1)
 # These must be the same length (ie 3)
@@ -29,8 +33,10 @@ led = []
 sw = []
 
 
-with open("index.html", "r") as index_file:
-    index_html = index_file.readlines()
+url = URL_Handler(DocumentRoot)
+
+#with open("index.html", "r") as index_file:
+#    index_html = index_file.readlines()
 
       
 # Functions control both output and led
@@ -104,26 +110,42 @@ async def serve_client(reader, writer):
     # We are not interested in HTTP request headers, skip them
     while await reader.readline() != b"\r\n":
         pass
-
-    stateis = "Server Active"
     
-    # Regular expressing Looking for toggle request
-    m = re.search ('light=(\d)&action=toggle', request_line)
-    if m != None:
-        led_selected = int(m.group(1))-1
-        # check valid number
-        if (led_selected >=0 and led_selected <= 2) :
-            print ("LED selected "+str(led_selected))
-            toggle_out (led_selected)
+    request = request_line.decode("utf-8")
+    
+    # LED change request (returns own string)
+    led_change = url.change_led(request)
+    if led_change != None:
+        if (led_change[1] == "toggle"):
+            toggle_out (led_change[0])
+        elif (led_change[1] == "on"):
+            turn_on (led_change[0])
+        elif (led_change[1] == "off"):
+            turn_off (led_change[0])
+        # Ignore any other values (code doesn't support any)
+        # Return status - currently just text (will change to JSON)
+        writer.write('HTTP/1.0 200 OK\r\nContent-type: text/text\r\n\r\n')
+        writer.write('Status ...')
+    
+    
+    else:
+        # Otherwise is this is static file request
+        
+        url_value, url_file, url_type = url.validate_file(request)
 
-    print ("Setting response")
-    writer.write('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-    for line in index_html:
-        writer.write(line)
+        writer.write('HTTP/1.0 {} OK\r\nContent-type: {}\r\n\r\n'.format(url_value, url_type))
+        # Send file 1kB at a time (avoid problem with large files exceeding available memory)
+        with open(DocumentRoot+url_file, "rb") as read_file:
+            data = read_file.read(1024)
+            while data:
+                writer.write(data)
+                await writer.drain()
+                data = read_file.read(1024)
+            read_file.close()
 
-    await writer.drain()
     await writer.wait_closed()
     print("Client disconnected")
+
     status_ready()
 
 # Initialise Wifi
